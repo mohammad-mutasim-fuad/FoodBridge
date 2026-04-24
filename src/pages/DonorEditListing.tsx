@@ -15,7 +15,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import { updateFoodListing, getFoodListingsByDonorID } from '../services/firebaseService';
 import { isValidFoodItemName, isValidQuantity, isValidPickupLocation, isValidExpirationDate } from '../utils/validators';
-import { FoodListing } from '../types';
+import type { FoodListing } from '../types';
 
 interface EditListingFormData {
   foodItemName: string;
@@ -79,7 +79,7 @@ export const DonorEditListing: React.FC = () => {
 
   if (!listing && !fetchError) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress />
       </Box>
     );
@@ -187,7 +187,7 @@ export const DonorEditListing: React.FC = () => {
               label="Expiration Date & Time"
               type="datetime-local"
               margin="normal"
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               {...register('expirationTime', {
                 required: 'Expiration date and time is required',
               })}

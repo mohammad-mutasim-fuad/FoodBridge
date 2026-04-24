@@ -20,10 +20,10 @@ import {
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { useFirestoreListener } from '../hooks/useFirestoreListener';
-import { deleteFoodListing, updateFoodListingStatus } from '../services/firebaseService';
+import { deleteFoodListing } from '../services/firebaseService';
 import { toast } from 'react-toastify';
 import { where } from 'firebase/firestore';
-import { FoodListing } from '../types';
+import type { FoodListing } from '../types';
 
 /**
  * Donor Dashboard - View and manage food listings
@@ -70,7 +70,7 @@ export const DonorDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress />
       </Box>
     );
@@ -95,7 +95,7 @@ export const DonorDashboard: React.FC = () => {
 
       {listings.length === 0 ? (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="textSecondary" paragraph>
+          <Typography color="textSecondary" sx={{ mb: 1 }}>
             You haven't created any food listings yet.
           </Typography>
           <Button

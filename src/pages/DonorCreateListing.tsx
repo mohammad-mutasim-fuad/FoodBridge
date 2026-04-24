@@ -134,7 +134,7 @@ export const DonorCreateListing: React.FC = () => {
               label="Expiration Date & Time"
               type="datetime-local"
               margin="normal"
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               {...register('expirationTime', {
                 required: 'Expiration date and time is required',
               })}

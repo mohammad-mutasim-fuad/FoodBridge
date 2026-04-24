@@ -154,7 +154,7 @@ const AppRoutes: React.FC = () => {
 };
 
 /**
- * Root App Component
+ * Main App Component
  */
 function App() {
   return (

@@ -1,114 +1,13 @@
-// Firestore Security Rules for FoodBridge
-// Copy this content to Firebase Console > Firestore Database > Rules
-// Then click "Publish" to deploy
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Helper function to get user's role
-    function getUserRole() {
-      return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data.role;
-    }
-    
-    // Helper function to check user is owner
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // ===== USERS COLLECTION =====
-    // Only admins can read all users
-    // Users can only read/write their own document
-    match /Users/{userId} {
-      // Read: User can read own, Admin can read all
-      allow read: if isAuthenticated() && (isOwner(userId) || getUserRole() == 'Admin');
-      
-      // Create: Any authenticated user during registration
-      allow create: if isAuthenticated() && 
-                      isOwner(userId) &&
-                      request.data.keys().hasAll(['email', 'role', 'organizationName', 'uid']) &&
-                      request.data.role in ['Donor', 'Receiver', 'Admin'] &&
-                      request.data.uid == userId;
-      
-      // Update: User can update own, Admin can update any
-      allow update: if isAuthenticated() && 
-                       (isOwner(userId) || getUserRole() == 'Admin') &&
-                       request.data.role in ['Donor', 'Receiver', 'Admin'];
-      
-      // Delete: Only Admin can delete
-      allow delete: if isAuthenticated() && getUserRole() == 'Admin';
-    }
-
-    // ===== FOOD LISTINGS COLLECTION =====
-    // Donors create/edit their own
-    // Receivers can read available and claim
-    // Admins can do everything
-    match /FoodListings/{listingId} {
-      // Read: Anyone can read (public feed)
-      allow read: if isAuthenticated();
-      
-      // Create: Only Donors can create
-      allow create: if isAuthenticated() && 
-                       getUserRole() == 'Donor' &&
-                       request.data.keys().hasAll(['donorId', 'foodItemName', 'quantity', 'expirationTime', 'pickupLocation', 'status']) &&
-                       isOwner(request.data.donorId) &&
-                       request.data.status == 'Available' &&
-                       request.data.quantity > 0 &&
-                       request.data.quantity <= 10000;
-      
-      // Update: Donor can update own, Receiver can claim, Admin can update any
-      allow update: if isAuthenticated() && (
-                       // Donor updating own listing
-                       (getUserRole() == 'Donor' && isOwner(resource.data.donorId) && 
-                        resource.data.status == 'Available' &&
-                        request.data.foodItemName != null &&
-                        request.data.quantity > 0 &&
-                        request.data.quantity <= 10000) ||
-                       // Receiver claiming food
-                       (getUserRole() == 'Receiver' && 
-                        resource.data.status == 'Available' &&
-                        request.data.status == 'Claimed' &&
-                        request.data.claimedBy == request.auth.uid) ||
-                       // Admin updating any
-                       (getUserRole() == 'Admin')
-                     );
-      
-      // Delete: Donor can delete own, Admin can delete any
-      allow delete: if isAuthenticated() && 
-                       (getUserRole() == 'Admin' || 
-                        (getUserRole() == 'Donor' && isOwner(resource.data.donorId)));
-    }
-
-    // ===== CLAIMS COLLECTION =====
-    // Track food claims for audit trail
-    match /Claims/{claimId} {
-      // Read: User can read own claims, Admin can read all
-      allow read: if isAuthenticated() && 
-                     (isOwner(resource.data.receiverId) || getUserRole() == 'Admin');
-      
-      // Create: Only system (backend) creates via Cloud Functions
-      // For now, allow Receivers to create claims when they claim food
-      allow create: if isAuthenticated() && 
-                       getUserRole() == 'Receiver' &&
-                       isOwner(request.data.receiverId) &&
-                       request.data.keys().hasAll(['receiverId', 'foodListingId', 'claimedAt']);
-      
-      // Update: Not allowed
-      allow update: if false;
-      
-      // Delete: Admin only
-      allow delete: if isAuthenticated() && getUserRole() == 'Admin';
-    }
-
-    // ===== DEFAULT DENY =====
-    // Deny all other access
+    // ALLOW ALL READ/WRITE ACCESS
+    // This is for testing purposes only. 
+    // It allows anyone with your project ID to access your data.
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
+    
   }
 }

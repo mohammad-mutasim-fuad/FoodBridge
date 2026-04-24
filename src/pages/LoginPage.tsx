@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -25,16 +25,35 @@ interface LoginFormData {
  */
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, error } = useAuth();
+  const { currentUser, login, error } = useAuth();
+  const [hasLoggedIn, setHasLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>();
+
+  useEffect(() => {
+    if (hasLoggedIn && currentUser) {
+      switch (currentUser.role) {
+        case 'Donor':
+          navigate('/donor/dashboard');
+          break;
+        case 'Receiver':
+          navigate('/receiver/dashboard');
+          break;
+        case 'Admin':
+          navigate('/admin/dashboard');
+          break;
+        default:
+          navigate('/unauthorized');
+      }
+    }
+  }, [currentUser, navigate, hasLoggedIn]);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsLoading(true);
       await login(data.email, data.password);
       toast.success('Login successful!');
-      // Navigation happens automatically via auth state change
+      setHasLoggedIn(true);
     } catch (err: any) {
       toast.error(err.message || 'Failed to login');
     } finally {

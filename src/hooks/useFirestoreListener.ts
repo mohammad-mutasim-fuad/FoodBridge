@@ -5,7 +5,7 @@ import {
   query,
   where,
   onSnapshot,
-  DocumentData,
+  type DocumentData,
   Query,
 } from 'firebase/firestore';
 
@@ -49,7 +49,7 @@ export const useFirestoreListener = <T extends DocumentData>(
             documents.push({
               id: doc.id,
               ...doc.data(),
-            } as T);
+            } as unknown as T);
           });
           setData(documents);
           setLoading(false);

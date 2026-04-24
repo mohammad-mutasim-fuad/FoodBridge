@@ -163,7 +163,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Typography variant="body2">
             © 2026 FoodBridge. Minimizing food waste, one connection at a time.
           </Typography>
-          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+          <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
             Connecting food donors with verified receiving organizations
           </Typography>
         </Container>

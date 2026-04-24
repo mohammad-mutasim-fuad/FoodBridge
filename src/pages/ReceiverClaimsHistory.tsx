@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { getFoodListingsByReceiverID } from '../services/firebaseService';
-import { FoodListing } from '../types';
+import type { FoodListing } from '../types';
 
 /**
  * Receiver Claims History Page - View all claimed food items
@@ -51,7 +51,7 @@ export const ReceiverClaimsHistory: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress />
       </Box>
     );
@@ -67,7 +67,7 @@ export const ReceiverClaimsHistory: React.FC = () => {
 
       {claims.length === 0 ? (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="textSecondary" paragraph>
+          <Typography color="textSecondary" sx={{ mb: 1 }}>
             You haven't claimed any food items yet.
           </Typography>
           <Typography variant="body2" color="textSecondary">

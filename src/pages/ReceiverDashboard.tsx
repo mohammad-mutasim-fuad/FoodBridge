@@ -24,7 +24,7 @@ import { useFirestoreListener } from '../hooks/useFirestoreListener';
 import { updateFoodListingStatus, createClaim } from '../services/firebaseService';
 import { toast } from 'react-toastify';
 import { where } from 'firebase/firestore';
-import { FoodListing } from '../types';
+import type { FoodListing } from '../types';
 
 /**
  * Receiver Dashboard - Browse and claim available food
@@ -82,7 +82,7 @@ export const ReceiverDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress />
       </Box>
     );
@@ -106,7 +106,7 @@ export const ReceiverDashboard: React.FC = () => {
 
       {filteredListings.length === 0 ? (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="textSecondary" paragraph>
+          <Typography color="textSecondary" sx={{ mb: 1 }}>
             {searchTerm
               ? 'No food listings match your search.'
               : 'No food listings available at the moment.'}

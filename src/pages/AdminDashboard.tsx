@@ -8,7 +8,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { getAllUsers, getAllFoodListings, getClaimsByReceiverID } from '../services/firebaseService';
+import { getAllUsers, getAllFoodListings } from '../services/firebaseService';
 
 /**
  * Admin Dashboard - Platform overview and statistics
@@ -39,7 +39,7 @@ export const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress />
       </Box>
     );
@@ -62,9 +62,9 @@ export const AdminDashboard: React.FC = () => {
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
         {/* Total Users */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Box>
           <Card sx={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -75,10 +75,10 @@ export const AdminDashboard: React.FC = () => {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Donors */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Box>
           <Card sx={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -89,10 +89,10 @@ export const AdminDashboard: React.FC = () => {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Receivers */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Box>
           <Card sx={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -103,10 +103,10 @@ export const AdminDashboard: React.FC = () => {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Total Listings */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Box>
           <Card sx={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -117,10 +117,10 @@ export const AdminDashboard: React.FC = () => {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Available */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Box>
           <Card sx={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -131,10 +131,10 @@ export const AdminDashboard: React.FC = () => {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Claimed */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Box>
           <Card sx={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -145,7 +145,7 @@ export const AdminDashboard: React.FC = () => {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
       </Grid>
 
       <Card sx={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
@@ -153,7 +153,7 @@ export const AdminDashboard: React.FC = () => {
           <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
             📈 Platform Status
           </Typography>
-          <Typography variant="body2" color="textSecondary" paragraph>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
             The FoodBridge platform is operational with active food donors and receiving organizations. Navigate to the "Users" or "Listings" section to manage platform content.
           </Typography>
           <Typography variant="body2" color="textSecondary">

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { Box, Typography, Button, Container } from '@mui/material';
 
 interface ErrorBoundaryProps {
@@ -33,12 +33,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       return (
         <Container maxWidth="sm">
           <Box
-            display="flex"
-            flexDirection="column"
-            justifyContent="center"
-            alignItems="center"
-            minHeight="100vh"
-            gap={2}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '100vh',
+              gap: 2,
+            }}
           >
             <Typography variant="h4" component="h1" gutterBottom>
               Oops! Something went wrong
@@ -46,9 +48,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             <Typography variant="body1" color="textSecondary" align="center">
               We encountered an unexpected error. Please try refreshing the page or go back to the home page.
             </Typography>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <Box
-                component="pre"
                 sx={{
                   backgroundColor: '#f5f5f5',
                   padding: 2,
@@ -56,12 +57,15 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                   overflow: 'auto',
                   maxWidth: '100%',
                   fontSize: '0.875rem',
+                  fontFamily: 'monospace',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
                 }}
               >
                 {this.state.error.message}
               </Box>
             )}
-            <Box display="flex" gap={1}>
+            <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
                 variant="contained"
                 onClick={() => window.location.reload()}

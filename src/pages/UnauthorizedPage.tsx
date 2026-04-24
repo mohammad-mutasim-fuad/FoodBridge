@@ -22,10 +22,10 @@ export const UnauthorizedPage: React.FC = () => {
         <Typography variant="h2" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: '#e74c3c' }}>
           🚫 Access Denied
         </Typography>
-        <Typography variant="h6" color="textSecondary" paragraph>
+        <Typography variant="h6" color="textSecondary" sx={{ mb: 1 }}>
           You do not have permission to access this resource.
         </Typography>
-        <Typography variant="body1" paragraph>
+        <Typography variant="body1" sx={{ mb: 1 }}>
           This page is restricted to a specific user role. If you believe this is an error, please contact the administrator.
         </Typography>
         <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>

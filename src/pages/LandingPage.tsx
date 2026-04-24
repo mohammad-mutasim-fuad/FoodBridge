@@ -7,7 +7,6 @@ import {
   Button,
   Card,
   CardContent,
-  Grid,
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 
@@ -80,9 +79,9 @@ export const LandingPage: React.FC = () => {
         <Typography variant="h4" component="h2" gutterBottom sx={{ textAlign: 'center', mb: 6, fontWeight: 'bold' }}>
           How FoodBridge Works
         </Typography>
-        <Grid container spacing={4}>
+        <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
           {/* For Donors */}
-          <Grid item xs={12} md={6}>
+          <Box sx={{ flex: '1 1 400px', maxWidth: '500px' }}>
             <Card
               sx={{
                 height: '100%',
@@ -97,7 +96,7 @@ export const LandingPage: React.FC = () => {
                 <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#667eea' }}>
                   📋 For Donors
                 </Typography>
-                <Typography variant="body2" color="textSecondary" paragraph>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
                   <strong>Restaurants, Bakeries & Event Organizers:</strong>
                 </Typography>
                 <ul>
@@ -108,10 +107,10 @@ export const LandingPage: React.FC = () => {
                 </ul>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
           {/* For Receivers */}
-          <Grid item xs={12} md={6}>
+          <Box sx={{ flex: '1 1 400px', maxWidth: '500px' }}>
             <Card
               sx={{
                 height: '100%',
@@ -126,7 +125,7 @@ export const LandingPage: React.FC = () => {
                 <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#764ba2' }}>
                   🤝 For Receivers
                 </Typography>
-                <Typography variant="body2" color="textSecondary" paragraph>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
                   <strong>NGOs, Shelters & Community Organizations:</strong>
                 </Typography>
                 <ul>
@@ -137,8 +136,8 @@ export const LandingPage: React.FC = () => {
                 </ul>
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Container>
 
       {/* Call to Action Section */}

@@ -1,17 +1,17 @@
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
-  Auth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
-  User as FirebaseUser,
+  type Auth,
+  type User as FirebaseUser,
 } from 'firebase/auth';
 import {
   getFirestore,
-  Firestore,
+  type Firestore,
   collection,
   doc,
   setDoc,
@@ -21,20 +21,33 @@ import {
   where,
   updateDoc,
   deleteDoc,
-  DocumentData,
-  Query,
 } from 'firebase/firestore';
 
-// TODO: Replace with your actual Firebase configuration
-// Get this from your Firebase Console -> Project Settings
+// Firebase Configuration
+// Get these values from your Firebase Console > Project Settings
+// Store them in .env file with VITE_ prefix
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || 'YOUR_API_KEY',
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'YOUR_AUTH_DOMAIN',
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || 'YOUR_PROJECT_ID',
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'YOUR_STORAGE_BUCKET',
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || 'YOUR_MESSAGING_SENDER_ID',
-  appId: process.env.REACT_APP_FIREBASE_APP_ID || 'YOUR_APP_ID',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
+
+// Validate that all required config values are present
+if (
+  !firebaseConfig.apiKey ||
+  !firebaseConfig.authDomain ||
+  !firebaseConfig.projectId ||
+  !firebaseConfig.appId
+) {
+  console.error(
+    'Firebase configuration is incomplete. Please ensure all VITE_FIREBASE_* environment variables are set in .env file.'
+  );
+}
+
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -63,7 +76,7 @@ export const signUp = async (
     const user = userCredential.user;
 
     // Create user document in Firestore
-    await setDoc(doc(firestore, 'Users', user.uid), {
+    const userData = {
       uid: user.uid,
       email: user.email,
       role,
@@ -71,10 +84,16 @@ export const signUp = async (
       organizationType: organizationType || '',
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    };
+    
+    // Use lowercase 'users' collection
+    console.log('Creating user doc in "users" (lowercase) with UID:', user.uid);
+    const userDocRef = doc(firestore, 'users', user.uid);
+    await setDoc(userDocRef, userData);
 
     return user;
   } catch (error: any) {
+    console.error('Signup error:', error);
     throw new Error(error.message || 'Error creating user account');
   }
 };
@@ -85,8 +104,10 @@ export const signUp = async (
 export const signIn = async (email: string, password: string): Promise<FirebaseUser> => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log('Signed in user UID:', userCredential.user.uid);
     return userCredential.user;
   } catch (error: any) {
+    console.error('Sign in error:', error);
     throw new Error(error.message || 'Error signing in');
   }
 };
@@ -120,18 +141,50 @@ export const onAuthChange = (callback: (user: FirebaseUser | null) => void) => {
   return onAuthStateChanged(auth, callback);
 };
 
+export type { FirebaseUser };
+
 // ============ Firestore Functions ============
 
 /**
- * Get user document by UID
+ * Get user document by UID - try both uppercase and lowercase collection names
  */
 export const getUserByUID = async (uid: string) => {
-  try {
-    const userDoc = await getDoc(doc(firestore, 'Users', uid));
-    return userDoc.exists() ? userDoc.data() : null;
-  } catch (error: any) {
-    throw new Error(error.message || 'Error fetching user');
+  // First, try getting by UID from both collections
+  const collections = ['Users', 'users'];
+  
+  for (const collName of collections) {
+    try {
+      console.log(`Trying collection "${collName}" with UID:`, uid);
+      const userDocRef = doc(firestore, collName, uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        console.log(`Found user in "${collName}":`, data);
+        return data;
+      }
+    } catch (e: any) {
+      console.log(`Error reading from "${collName}":`, e.message);
+    }
   }
+  
+  // If not found, query by email from both collections
+  console.log('Not found by UID, trying to query by email:', uid);
+  for (const collName of collections) {
+    try {
+      console.log(`Querying collection "${collName}" by email...`);
+      const q = query(collection(firestore, collName), where('email', '==', uid));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        console.log(`Found user by email in "${collName}":`, snapshot.docs[0].data());
+        return snapshot.docs[0].data();
+      }
+    } catch (e: any) {
+      console.log(`Query by email failed in "${collName}":`, e.message);
+    }
+  }
+  
+  console.log('User document NOT found in any collection');
+  return null;
 };
 
 /**
@@ -166,16 +219,27 @@ export const createFoodListing = async (
 };
 
 /**
- * Get all food listings
+ * Get all food listings - try both FoodListings and foodListings collections
  */
 export const getAllFoodListings = async () => {
   try {
-    const querySnapshot = await getDocs(collection(firestore, 'FoodListings'));
+    // Try 'FoodListings' collection first
+    let querySnapshot = await getDocs(collection(firestore, 'FoodListings'));
+    if (!querySnapshot.empty) {
+      return querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    }
+    
+    // Try 'foodListings' collection
+    querySnapshot = await getDocs(collection(firestore, 'foodListings'));
     return querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
   } catch (error: any) {
+    console.error('Error fetching food listings:', error);
     throw new Error(error.message || 'Error fetching food listings');
   }
 };
@@ -203,10 +267,21 @@ export const getFoodListingsByDonorID = async (donorId: string) => {
   try {
     const q = query(collection(firestore, 'FoodListings'), where('donorId', '==', donorId));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    return querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        donorId: data.donorId,
+        foodItemName: data.foodItemName,
+        quantity: data.quantity,
+        expirationTime: data.expirationTime,
+        pickupLocation: data.pickupLocation,
+        status: data.status,
+        claimedBy: data.claimedBy,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      };
+    });
   } catch (error: any) {
     throw new Error(error.message || 'Error fetching donor listings');
   }
@@ -219,10 +294,21 @@ export const getFoodListingsByReceiverID = async (receiverId: string) => {
   try {
     const q = query(collection(firestore, 'FoodListings'), where('claimedBy', '==', receiverId));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    return querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        donorId: data.donorId,
+        foodItemName: data.foodItemName,
+        quantity: data.quantity,
+        expirationTime: data.expirationTime,
+        pickupLocation: data.pickupLocation,
+        status: data.status,
+        claimedBy: data.claimedBy,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      };
+    });
   } catch (error: any) {
     throw new Error(error.message || 'Error fetching receiver claimed listings');
   }
@@ -275,40 +361,57 @@ export const updateFoodListing = async (
 };
 
 /**
- * Delete food listing
+ * Delete food listing - try both collections
  */
 export const deleteFoodListing = async (listingId: string) => {
   try {
-    await deleteDoc(doc(firestore, 'FoodListings', listingId));
+    try {
+      await deleteDoc(doc(firestore, 'FoodListings', listingId));
+    } catch {
+      await deleteDoc(doc(firestore, 'foodListings', listingId));
+    }
   } catch (error: any) {
     throw new Error(error.message || 'Error deleting food listing');
   }
 };
 
 /**
- * Delete user (admin only)
+ * Delete user (admin only) - try both collections
  */
 export const deleteUser = async (userId: string) => {
   try {
-    // Delete user document
-    await deleteDoc(doc(firestore, 'Users', userId));
-    // Note: Firebase Auth user deletion requires current user auth, implement from client-side auth context
+    try {
+      await deleteDoc(doc(firestore, 'Users', userId));
+    } catch {
+      await deleteDoc(doc(firestore, 'users', userId));
+    }
   } catch (error: any) {
     throw new Error(error.message || 'Error deleting user');
   }
 };
 
 /**
- * Get all users (admin only)
+ * Get all users (admin only) - try both Users and users collections
  */
 export const getAllUsers = async () => {
   try {
-    const querySnapshot = await getDocs(collection(firestore, 'Users'));
+    // Try 'Users' collection first
+    let querySnapshot = await getDocs(collection(firestore, 'Users'));
+    if (!querySnapshot.empty) {
+      return querySnapshot.docs.map((doc) => ({
+        uid: doc.id,
+        ...doc.data(),
+      }));
+    }
+    
+    // Try 'users' collection
+    querySnapshot = await getDocs(collection(firestore, 'users'));
     return querySnapshot.docs.map((doc) => ({
       uid: doc.id,
       ...doc.data(),
     }));
   } catch (error: any) {
+    console.error('Error fetching users:', error);
     throw new Error(error.message || 'Error fetching users');
   }
 };

@@ -1,14 +1,12 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, type ReactNode } from 'react';
 import {
   signUp,
   signIn,
   logout,
   resetPassword,
-  onAuthChange,
   getUserByUID,
-  auth,
 } from '../services/firebaseService';
-import { User, AuthContextType } from '../types';
+import type { User, AuthContextType } from '../types';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -18,7 +16,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -33,10 +31,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ) => {
     try {
       setError(null);
-      await signUp(email, password, role, organizationName, organizationType);
+      setLoading(true);
+      const firebaseUser = await signUp(email, password, role, organizationName, organizationType);
+      const userData = await getUserByUID(firebaseUser.uid);
+      if (userData) {
+        setCurrentUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          role: userData.role,
+          organizationName: userData.organizationName,
+          organizationType: userData.organizationType,
+          createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date(userData.createdAt),
+          updatedAt: userData.updatedAt?.toDate ? userData.updatedAt.toDate() : new Date(userData.updatedAt),
+        });
+      }
     } catch (err: any) {
       setError(err.message);
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,10 +59,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleLogin = async (email: string, password: string) => {
     try {
       setError(null);
-      await signIn(email, password);
+      setLoading(true);
+      const firebaseUser = await signIn(email, password);
+      const userData = await getUserByUID(firebaseUser.uid);
+      if (userData) {
+        setCurrentUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          role: userData.role,
+          organizationName: userData.organizationName,
+          organizationType: userData.organizationType,
+          createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date(userData.createdAt),
+          updatedAt: userData.updatedAt?.toDate ? userData.updatedAt.toDate() : new Date(userData.updatedAt),
+        });
+      } else {
+        console.error('User data not found for UID:', firebaseUser.uid);
+        setError('User data not found. Please contact admin.');
+      }
     } catch (err: any) {
       setError(err.message);
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,39 +110,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw err;
     }
   };
-
-  /**
-   * Listen to auth state changes and update user
-   */
-  useEffect(() => {
-    const unsubscribe = onAuthChange(async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          // Fetch user document from Firestore
-          const userData = await getUserByUID(firebaseUser.uid);
-          if (userData) {
-            setCurrentUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              role: userData.role,
-              organizationName: userData.organizationName,
-              organizationType: userData.organizationType,
-              createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date(userData.createdAt),
-              updatedAt: userData.updatedAt?.toDate ? userData.updatedAt.toDate() : new Date(userData.updatedAt),
-            });
-          }
-        } catch (err) {
-          console.error('Error fetching user data:', err);
-          setError('Failed to load user data');
-        }
-      } else {
-        setCurrentUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const value: AuthContextType = {
     currentUser,
