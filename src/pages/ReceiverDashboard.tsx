@@ -134,7 +134,7 @@ export const ReceiverDashboard: React.FC = () => {
                   <TableCell>{listing.foodItemName}</TableCell>
                   <TableCell align="center">{listing.quantity} units</TableCell>
                   <TableCell>{listing.pickupLocation}</TableCell>
-                  <TableCell>{listing.donorId}</TableCell>
+                  <TableCell>{listing.donorOrganizationName || listing.donorId}</TableCell>
                   <TableCell>{formatDate(listing.expirationTime)}</TableCell>
                   <TableCell align="center">
                     <Button

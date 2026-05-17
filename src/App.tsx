@@ -23,6 +23,8 @@ import { ReceiverClaimsHistory } from './pages/ReceiverClaimsHistory';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AdminUsers } from './pages/AdminUsers';
 import { AdminListings } from './pages/AdminListings';
+import { MessagesPage } from './pages/MessagesPage';
+import { RoutePage } from './pages/RoutePage';
 
 // Create theme
 const theme = createTheme({
@@ -92,6 +94,26 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/donor/messages"
+        element={
+          <ProtectedRoute allowedRoles={['Donor']}>
+            <Layout>
+              <MessagesPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/donor/route"
+        element={
+          <ProtectedRoute allowedRoles={['Donor']}>
+            <Layout>
+              <RoutePage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Receiver Routes */}
       <Route
@@ -110,6 +132,16 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute allowedRoles={['Receiver']}>
             <Layout>
               <ReceiverClaimsHistory />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/receiver/messages"
+        element={
+          <ProtectedRoute allowedRoles={['Receiver']}>
+            <Layout>
+              <MessagesPage />
             </Layout>
           </ProtectedRoute>
         }
@@ -142,6 +174,16 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute allowedRoles={['Admin']}>
             <Layout>
               <AdminListings />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/messages"
+        element={
+          <ProtectedRoute allowedRoles={['Admin']}>
+            <Layout>
+              <MessagesPage />
             </Layout>
           </ProtectedRoute>
         }

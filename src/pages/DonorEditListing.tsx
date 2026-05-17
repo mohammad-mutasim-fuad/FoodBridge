@@ -9,7 +9,10 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Stack,
+  IconButton,
 } from '@mui/material';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useAuth } from '../hooks/useAuth';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
@@ -22,6 +25,8 @@ interface EditListingFormData {
   quantity: string;
   expirationTime: string;
   pickupLocation: string;
+  pickupLat: string;
+  pickupLng: string;
 }
 
 /**
@@ -32,18 +37,42 @@ export const DonorEditListing: React.FC = () => {
   const { currentUser } = useAuth();
   const { listingId } = useParams<{ listingId: string }>();
   const [isLoading, setIsLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [listing, setListing] = useState<FoodListing | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<EditListingFormData>();
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<EditListingFormData>();
 
-  // Fetch the listing
+  const pickupLat = watch('pickupLat');
+  const pickupLng = watch('pickupLng');
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setValue('pickupLat', position.coords.latitude.toString());
+        setValue('pickupLng', position.coords.longitude.toString());
+        setLocationLoading(false);
+        toast.success('Location captured successfully!');
+      },
+      () => {
+        setLocationLoading(false);
+        toast.error('Unable to get your location. Please enter coordinates manually.');
+      }
+    );
+  };
+
   useEffect(() => {
     const fetchListing = async () => {
       if (!currentUser || !listingId) return;
 
       try {
         const listings = await getFoodListingsByDonorID(currentUser.uid);
-        const foundListing = listings.find((l: any) => l.id === listingId);
+        const foundListing = listings.find((l: FoodListing) => l.id === listingId);
 
         if (!foundListing) {
           setFetchError('Listing not found or you do not have permission to edit it.');
@@ -58,7 +87,6 @@ export const DonorEditListing: React.FC = () => {
 
         setListing(foundListing);
 
-        // Set form values
         const expirationDate = foundListing.expirationTime.toDate
           ? foundListing.expirationTime.toDate()
           : new Date(foundListing.expirationTime);
@@ -68,6 +96,8 @@ export const DonorEditListing: React.FC = () => {
           quantity: foundListing.quantity.toString(),
           pickupLocation: foundListing.pickupLocation,
           expirationTime: expirationDate.toISOString().slice(0, 16),
+          pickupLat: foundListing.pickupLat?.toString() || '',
+          pickupLng: foundListing.pickupLng?.toString() || '',
         });
       } catch (err: any) {
         setFetchError(err.message || 'Failed to fetch listing');
@@ -93,7 +123,6 @@ export const DonorEditListing: React.FC = () => {
     if (!listing) return;
 
     try {
-      // Validate inputs
       const foodNameValidation = isValidFoodItemName(data.foodItemName);
       if (!foodNameValidation.valid) {
         toast.error(foodNameValidation.message);
@@ -124,7 +153,9 @@ export const DonorEditListing: React.FC = () => {
         data.foodItemName,
         parseInt(data.quantity),
         new Date(data.expirationTime),
-        data.pickupLocation
+        data.pickupLocation,
+        data.pickupLat ? parseFloat(data.pickupLat) : undefined,
+        data.pickupLng ? parseFloat(data.pickupLng) : undefined
       );
 
       toast.success('Food listing updated successfully!');
@@ -181,6 +212,46 @@ export const DonorEditListing: React.FC = () => {
               helperText={errors.pickupLocation?.message}
               disabled={isLoading}
             />
+
+            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+              📍 Pickup Location Coordinates (Optional)
+            </Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Update coordinates for route optimization
+            </Typography>
+
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+              <TextField
+                label="Latitude"
+                placeholder="e.g., 40.7128"
+                size="small"
+                {...register('pickupLat')}
+                sx={{ flex: 1 }}
+                disabled={isLoading}
+              />
+              <TextField
+                label="Longitude"
+                placeholder="e.g., -74.0060"
+                size="small"
+                {...register('pickupLng')}
+                sx={{ flex: 1 }}
+                disabled={isLoading}
+              />
+              <IconButton
+                onClick={getCurrentLocation}
+                disabled={locationLoading}
+                color="primary"
+                sx={{ backgroundColor: '#f0f0f0' }}
+              >
+                {locationLoading ? <CircularProgress size={24} /> : <MyLocationIcon />}
+              </IconButton>
+            </Stack>
+
+            {(pickupLat && pickupLng) && (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                Location set: {parseFloat(pickupLat).toFixed(6)}, {parseFloat(pickupLng).toFixed(6)}
+              </Alert>
+            )}
 
             <TextField
               fullWidth

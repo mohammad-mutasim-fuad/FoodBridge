@@ -61,11 +61,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const baseLinks = [
       currentUser.role === 'Donor' && { label: 'Dashboard', path: '/donor/dashboard' },
       currentUser.role === 'Donor' && { label: 'Create Listing', path: '/donor/create-listing' },
+      currentUser.role === 'Donor' && { label: 'Route', path: '/donor/route' },
+      currentUser.role === 'Donor' && { label: 'Messages', path: '/donor/messages' },
       currentUser.role === 'Receiver' && { label: 'Food Feed', path: '/receiver/dashboard' },
       currentUser.role === 'Receiver' && { label: 'Claims History', path: '/receiver/claims-history' },
+      currentUser.role === 'Receiver' && { label: 'Messages', path: '/receiver/messages' },
       currentUser.role === 'Admin' && { label: 'Dashboard', path: '/admin/dashboard' },
       currentUser.role === 'Admin' && { label: 'Users', path: '/admin/users' },
       currentUser.role === 'Admin' && { label: 'Listings', path: '/admin/listings' },
+      currentUser.role === 'Admin' && { label: 'Messages', path: '/admin/messages' },
     ].filter(Boolean);
 
     return (

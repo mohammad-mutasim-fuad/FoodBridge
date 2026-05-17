@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -11,9 +12,11 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  Button,
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
-import { getFoodListingsByReceiverID } from '../services/firebaseService';
+import { getFoodListingsByReceiverID, getOrCreateConversation, getUserByUID } from '../services/firebaseService';
+import { toast } from 'react-toastify';
 import type { FoodListing } from '../types';
 
 /**
@@ -21,6 +24,7 @@ import type { FoodListing } from '../types';
  */
 export const ReceiverClaimsHistory: React.FC = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [claims, setClaims] = useState<FoodListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +51,31 @@ export const ReceiverClaimsHistory: React.FC = () => {
     if (!date) return 'N/A';
     const d = date.toDate ? date.toDate() : new Date(date);
     return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+  };
+
+  const handleMessageDonor = async (listing: any) => {
+    if (!currentUser || !listing.donorId) return;
+
+    try {
+      const donorData = await getUserByUID(listing.donorId);
+      if (!donorData) {
+        toast.error('Donor not found');
+        return;
+      }
+
+      const conversation = await getOrCreateConversation(
+        listing.donorId,
+        donorData.organizationName,
+        currentUser.uid,
+        currentUser.organizationName,
+        listing.id,
+        listing.foodItemName
+      );
+
+      navigate(`/receiver/messages?conversation=${conversation.id}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to start conversation');
+    }
   };
 
   if (loading) {
@@ -85,6 +114,7 @@ export const ReceiverClaimsHistory: React.FC = () => {
                 <TableCell sx={{ fontWeight: 'bold' }}>Donor Organization</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Must Pickup By</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Claimed On</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -93,9 +123,19 @@ export const ReceiverClaimsHistory: React.FC = () => {
                   <TableCell>{claim.foodItemName}</TableCell>
                   <TableCell align="center">{claim.quantity} units</TableCell>
                   <TableCell>{claim.pickupLocation}</TableCell>
-                  <TableCell>{claim.donorId}</TableCell>
+                  <TableCell>{claim.donorOrganizationName || claim.donorId}</TableCell>
                   <TableCell>{formatDate(claim.expirationTime)}</TableCell>
                   <TableCell>{formatDate(claim.updatedAt)}</TableCell>
+                  <TableCell align="center">
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={() => handleMessageDonor(claim)}
+                    >
+                      Message Donor
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

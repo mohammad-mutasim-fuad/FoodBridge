@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { useFirestoreListener } from '../hooks/useFirestoreListener';
-import { deleteFoodListing } from '../services/firebaseService';
+import { deleteFoodListing, getOrCreateConversation, getUserByUID } from '../services/firebaseService';
 import { toast } from 'react-toastify';
 import { where } from 'firebase/firestore';
 import type { FoodListing } from '../types';
@@ -59,6 +59,31 @@ export const DonorDashboard: React.FC = () => {
       toast.error(err.message || 'Failed to delete listing');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleMessageReceiver = async (listing: any) => {
+    if (!currentUser || !listing.claimedBy) return;
+
+    try {
+      const receiverData = await getUserByUID(listing.claimedBy);
+      if (!receiverData) {
+        toast.error('Receiver not found');
+        return;
+      }
+
+      const conversation = await getOrCreateConversation(
+        currentUser.uid,
+        currentUser.organizationName,
+        listing.claimedBy,
+        receiverData.organizationName,
+        listing.id,
+        listing.foodItemName
+      );
+
+      navigate(`/donor/messages?conversation=${conversation.id}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to start conversation');
     }
   };
 
@@ -142,6 +167,17 @@ export const DonorDashboard: React.FC = () => {
                   </TableCell>
                   <TableCell>{formatDate(listing.expirationTime)}</TableCell>
                   <TableCell align="center">
+                    {listing.status === 'Claimed' && listing.claimedBy && (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleMessageReceiver(listing)}
+                        sx={{ mr: 1 }}
+                      >
+                        Message
+                      </Button>
+                    )}
                     <Button
                       size="small"
                       variant="outlined"

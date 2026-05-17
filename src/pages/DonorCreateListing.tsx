@@ -9,7 +9,10 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Stack,
+  IconButton,
 } from '@mui/material';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useAuth } from '../hooks/useAuth';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
@@ -21,6 +24,8 @@ interface CreateListingFormData {
   quantity: string;
   expirationTime: string;
   pickupLocation: string;
+  pickupLat: string;
+  pickupLng: string;
 }
 
 /**
@@ -30,15 +35,39 @@ export const DonorCreateListing: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<CreateListingFormData>();
+  const [locationLoading, setLocationLoading] = useState(false);
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<CreateListingFormData>();
+
+  const pickupLat = watch('pickupLat');
+  const pickupLng = watch('pickupLng');
 
   if (!currentUser) {
     return <Alert severity="error">You must be logged in as a Donor to create listings.</Alert>;
   }
 
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setValue('pickupLat', position.coords.latitude.toString());
+        setValue('pickupLng', position.coords.longitude.toString());
+        setLocationLoading(false);
+        toast.success('Location captured successfully!');
+      },
+      () => {
+        setLocationLoading(false);
+        toast.error('Unable to get your location. Please enter coordinates manually.');
+      }
+    );
+  };
+
   const onSubmit = async (data: CreateListingFormData) => {
     try {
-      // Validate inputs
       const foodNameValidation = isValidFoodItemName(data.foodItemName);
       if (!foodNameValidation.valid) {
         toast.error(foodNameValidation.message);
@@ -66,10 +95,13 @@ export const DonorCreateListing: React.FC = () => {
       setIsLoading(true);
       await createFoodListing(
         currentUser.uid,
+        currentUser.organizationName,
         data.foodItemName,
         parseInt(data.quantity),
         new Date(data.expirationTime),
-        data.pickupLocation
+        data.pickupLocation,
+        data.pickupLat ? parseFloat(data.pickupLat) : undefined,
+        data.pickupLng ? parseFloat(data.pickupLng) : undefined
       );
 
       toast.success('Food listing created successfully!');
@@ -128,6 +160,46 @@ export const DonorCreateListing: React.FC = () => {
               helperText={errors.pickupLocation?.message}
               disabled={isLoading}
             />
+
+            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+              📍 Pickup Location Coordinates (Optional)
+            </Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Enter coordinates or use your current location for route optimization
+            </Typography>
+
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+              <TextField
+                label="Latitude"
+                placeholder="e.g., 40.7128"
+                size="small"
+                {...register('pickupLat')}
+                sx={{ flex: 1 }}
+                disabled={isLoading}
+              />
+              <TextField
+                label="Longitude"
+                placeholder="e.g., -74.0060"
+                size="small"
+                {...register('pickupLng')}
+                sx={{ flex: 1 }}
+                disabled={isLoading}
+              />
+              <IconButton
+                onClick={getCurrentLocation}
+                disabled={locationLoading}
+                color="primary"
+                sx={{ backgroundColor: '#f0f0f0' }}
+              >
+                {locationLoading ? <CircularProgress size={24} /> : <MyLocationIcon />}
+              </IconButton>
+            </Stack>
+
+            {(pickupLat && pickupLng) && (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                Location set: {parseFloat(pickupLat).toFixed(6)}, {parseFloat(pickupLng).toFixed(6)}
+              </Alert>
+            )}
 
             <TextField
               fullWidth

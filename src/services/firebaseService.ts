@@ -19,8 +19,11 @@ import {
   getDocs,
   query,
   where,
+  orderBy,
   updateDoc,
   deleteDoc,
+  addDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 
 // Firebase Configuration
@@ -188,22 +191,59 @@ export const getUserByUID = async (uid: string) => {
 };
 
 /**
+ * Get multiple users by their IDs
+ */
+export const getUsersByIds = async (userIds: string[]) => {
+  const users: { [key: string]: string } = {};
+  const collections = ['Users', 'users'];
+  
+  for (const userId of userIds) {
+    for (const collName of collections) {
+      try {
+        const userDocRef = doc(firestore, collName, userId);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          users[userId] = data.organizationName || userId;
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    if (!users[userId]) {
+      users[userId] = userId.substring(0, 8) + '...';
+    }
+  }
+  
+  return users;
+};
+
+/**
  * Create a new food listing
  */
 export const createFoodListing = async (
   donorId: string,
+  donorOrganizationName: string,
   foodItemName: string,
   quantity: number,
   expirationTime: Date,
-  pickupLocation: string
+  pickupLocation: string,
+  pickupLat?: number,
+  pickupLng?: number
 ) => {
   try {
     const newListing = {
       donorId,
+      donorOrganizationName,
       foodItemName,
       quantity,
       expirationTime,
       pickupLocation,
+      pickupLat: pickupLat || null,
+      pickupLng: pickupLng || null,
+      deliveryLat: null,
+      deliveryLng: null,
       status: 'Available',
       claimedBy: null,
       createdAt: new Date(),
@@ -272,10 +312,15 @@ export const getFoodListingsByDonorID = async (donorId: string) => {
       return {
         id: doc.id,
         donorId: data.donorId,
+        donorOrganizationName: data.donorOrganizationName || '',
         foodItemName: data.foodItemName,
         quantity: data.quantity,
         expirationTime: data.expirationTime,
         pickupLocation: data.pickupLocation,
+        pickupLat: data.pickupLat || null,
+        pickupLng: data.pickupLng || null,
+        deliveryLat: data.deliveryLat || null,
+        deliveryLng: data.deliveryLng || null,
         status: data.status,
         claimedBy: data.claimedBy,
         createdAt: data.createdAt,
@@ -299,6 +344,7 @@ export const getFoodListingsByReceiverID = async (receiverId: string) => {
       return {
         id: doc.id,
         donorId: data.donorId,
+        donorOrganizationName: data.donorOrganizationName || '',
         foodItemName: data.foodItemName,
         quantity: data.quantity,
         expirationTime: data.expirationTime,
@@ -345,16 +391,23 @@ export const updateFoodListing = async (
   foodItemName: string,
   quantity: number,
   expirationTime: Date,
-  pickupLocation: string
+  pickupLocation: string,
+  pickupLat?: number,
+  pickupLng?: number
 ) => {
   try {
-    await updateDoc(doc(firestore, 'FoodListings', listingId), {
+    const updateData: any = {
       foodItemName,
       quantity,
       expirationTime,
       pickupLocation,
       updatedAt: new Date(),
-    });
+    };
+    
+    if (pickupLat !== undefined) updateData.pickupLat = pickupLat;
+    if (pickupLng !== undefined) updateData.pickupLng = pickupLng;
+    
+    await updateDoc(doc(firestore, 'FoodListings', listingId), updateData);
   } catch (error: any) {
     throw new Error(error.message || 'Error updating food listing');
   }
@@ -451,6 +504,186 @@ export const getClaimsByReceiverID = async (receiverId: string) => {
   }
 };
 
+/**
+ * Get or create a conversation between donor and receiver for a food listing
+ */
+export const getOrCreateConversation = async (
+  donorId: string,
+  donorName: string,
+  receiverId: string,
+  receiverName: string,
+  foodListingId: string,
+  foodItemName: string
+) => {
+  try {
+    // First try to find existing conversation
+    const q = query(
+      collection(firestore, 'Conversations'),
+      where('foodListingId', '==', foodListingId)
+    );
+    const snapshot = await getDocs(q);
+    
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      if (
+        (data.participants.donorId === donorId && data.participants.receiverId === receiverId) ||
+        (data.participants.donorId === receiverId && data.participants.receiverId === donorId)
+      ) {
+        return { id: docSnap.id, ...data };
+      }
+    }
+
+    // Create new conversation
+    const newConversation = {
+      participants: {
+        donorId,
+        donorName,
+        receiverId,
+        receiverName,
+      },
+      foodListingId,
+      foodItemName,
+      updatedAt: new Date(),
+    };
+
+    const docRef = await addDoc(collection(firestore, 'Conversations'), newConversation);
+    return { id: docRef.id, ...newConversation };
+  } catch (error: any) {
+    throw new Error(error.message || 'Error creating conversation');
+  }
+};
+
+/**
+ * Get conversations for a user
+ */
+export const getConversationsByUserId = async (userId: string): Promise<any[]> => {
+  try {
+    const q = query(
+      collection(firestore, 'Conversations'),
+      orderBy('updatedAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter((conv: any) => 
+        conv.participants?.donorId === userId || conv.participants?.receiverId === userId
+      );
+  } catch (error: any) {
+    throw new Error(error.message || 'Error fetching conversations');
+  }
+};
+
+/**
+ * Send a message in a conversation
+ */
+export const sendMessage = async (
+  conversationId: string,
+  senderId: string,
+  senderName: string,
+  senderRole: 'Donor' | 'Receiver',
+  content: string
+) => {
+  try {
+    const message = {
+      conversationId,
+      senderId,
+      senderName,
+      senderRole,
+      content,
+      createdAt: serverTimestamp(),
+      read: false,
+    };
+
+    const docRef = await addDoc(collection(firestore, 'Messages'), message);
+
+    // Update conversation's last message
+    await updateDoc(doc(firestore, 'Conversations', conversationId), {
+      lastMessage: content,
+      lastMessageAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    return { id: docRef.id, ...message };
+  } catch (error: any) {
+    throw new Error(error.message || 'Error sending message');
+  }
+};
+
+/**
+ * Get messages for a conversation
+ */
+export const getMessagesByConversationId = async (conversationId: string): Promise<any[]> => {
+  try {
+    const q = query(
+      collection(firestore, 'Messages'),
+      where('conversationId', '==', conversationId)
+    );
+    const snapshot = await getDocs(q);
+    const msgs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    // Sort messages by createdAt on client side
+    return msgs.sort((a: any, b: any) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+      return dateA.getTime() - dateB.getTime();
+    });
+  } catch (error: any) {
+    throw new Error(error.message || 'Error fetching messages');
+  }
+};
+
+/**
+ * Mark messages as read
+ */
+export const markMessagesAsRead = async (conversationId: string, userId: string) => {
+  try {
+    const q = query(
+      collection(firestore, 'Messages'),
+      where('conversationId', '==', conversationId),
+      where('read', '==', false)
+    );
+    const snapshot = await getDocs(q);
+    
+    const updatePromises = snapshot.docs
+      .filter((doc) => doc.data().senderId !== userId)
+      .map((doc) => updateDoc(doc.ref, { read: true }));
+    
+    await Promise.all(updatePromises);
+  } catch (error: any) {
+    throw new Error(error.message || 'Error marking messages as read');
+  }
+};
+
+/**
+ * Get unread message count for a user
+ */
+export const getUnreadMessageCount = async (userId: string) => {
+  try {
+    const conversations = await getConversationsByUserId(userId);
+    let unreadCount = 0;
+
+    for (const conv of conversations) {
+      const q = query(
+        collection(firestore, 'Messages'),
+        where('conversationId', '==', conv.id),
+        where('read', '==', false)
+      );
+      const snapshot = await getDocs(q);
+      const messages = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      unreadCount += messages.filter((m: any) => m.senderId !== userId).length;
+    }
+
+    return unreadCount;
+  } catch (error: any) {
+    return 0;
+  }
+};
+
 export default {
   auth,
   firestore,
@@ -472,4 +705,10 @@ export default {
   getAllUsers,
   createClaim,
   getClaimsByReceiverID,
+  getOrCreateConversation,
+  getConversationsByUserId,
+  sendMessage,
+  getMessagesByConversationId,
+  markMessagesAsRead,
+  getUnreadMessageCount,
 };

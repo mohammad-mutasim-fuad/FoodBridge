@@ -17,7 +17,7 @@ import {
   DialogActions,
   Alert,
 } from '@mui/material';
-import { getAllFoodListings, deleteFoodListing } from '../services/firebaseService';
+import { getAllFoodListings, deleteFoodListing, getUsersByIds } from '../services/firebaseService';
 import { toast } from 'react-toastify';
 
 /**
@@ -25,6 +25,7 @@ import { toast } from 'react-toastify';
  */
 export const AdminListings: React.FC = () => {
   const [listings, setListings] = useState<any[]>([]);
+  const [receiverNames, setReceiverNames] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -37,6 +38,17 @@ export const AdminListings: React.FC = () => {
         setLoading(true);
         const listingsData = await getAllFoodListings();
         setListings(listingsData);
+
+        const receiverIds = [...new Set(
+          listingsData
+            .filter((l: any) => l.status === 'Claimed' && l.claimedBy)
+            .map((l: any) => l.claimedBy)
+        )];
+        
+        if (receiverIds.length > 0) {
+          const names = await getUsersByIds(receiverIds);
+          setReceiverNames(names);
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to fetch listings');
       } finally {
@@ -102,8 +114,10 @@ export const AdminListings: React.FC = () => {
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Food Item</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>Quantity</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Donor</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Pickup Location</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Claimed By</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Created</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Expiration</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
@@ -114,6 +128,7 @@ export const AdminListings: React.FC = () => {
                 <TableRow key={listing.id} sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}>
                   <TableCell>{listing.foodItemName}</TableCell>
                   <TableCell align="center">{listing.quantity}</TableCell>
+                  <TableCell>{listing.donorOrganizationName || listing.donorId}</TableCell>
                   <TableCell>{listing.pickupLocation}</TableCell>
                   <TableCell>
                     <Box
@@ -130,6 +145,7 @@ export const AdminListings: React.FC = () => {
                       {listing.status}
                     </Box>
                   </TableCell>
+                  <TableCell>{listing.status === 'Claimed' ? (receiverNames[listing.claimedBy] || listing.claimedBy?.substring(0, 8) + '...') : '-'}</TableCell>
                   <TableCell>{formatDate(listing.createdAt)}</TableCell>
                   <TableCell>{formatDate(listing.expirationTime)}</TableCell>
                   <TableCell align="center">
